@@ -168,11 +168,16 @@ func Probe(samplingTargetList []SamplingTarget, commandTemplate []string) (map[S
         fmt.Println("error occured:")
         fmt.Printf("%s", err)
     }
-    fpingResults := strings.Split(string(cmdOutput),"\n")
-    fpingResults = fpingResults[:len(fpingResults)-1]
-    for i, result := range fpingResults {
-        fmt.Print("Result ", i+1, ": ")
-        fmt.Println(result)
+    var fpingResults []string
+    fpingResultsTmp := strings.Split(string(cmdOutput),"\n")
+    fpingResultsTmp = fpingResultsTmp[:len(fpingResultsTmp)-1]
+    for i, result := range fpingResultsTmp {
+        if strings.HasPrefix(fpingResultsTmp[i], "ICMP Time Exceeded from") {
+            fmt.Println("Result - ICMP Time Exceeded", i+1, ":", result)
+        } else {
+            fpingResults = append(fpingResults, fpingResultsTmp[i])
+            fmt.Println("Result", i+1, ":", result)
+        }
     }
     for i, fpingResult := range fpingResults {
         parsedFpingResult := strings.FieldsFunc(fpingResult, func(r rune) bool {
