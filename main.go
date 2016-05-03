@@ -4,11 +4,12 @@ import "log"
 
 func init() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-	InitGeneralConfig()
-	InitRPC()
 }
 
 func main() {
+	InitGeneralConfig()
+	InitRPC()
+
 	probingCmd, err := QueryTask()
 	if err != nil {
 		log.Println(err)
