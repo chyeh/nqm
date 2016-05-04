@@ -10,7 +10,7 @@ func main() {
 	InitGeneralConfig()
 	InitRPC()
 
-	probingCmd, err := QueryTask()
+	probingCmd, targets, err := QueryTask()
 	if err != nil {
 		log.Println(err)
 		return
@@ -18,7 +18,7 @@ func main() {
 	log.Println("Execution the probing command:", probingCmd[0])
 
 	rawData := Probe(probingCmd)
-	jsonParams := MarshalIntoParameters(rawData)
+	jsonParams := MarshalIntoParameters(rawData, targets)
 	Push(jsonParams)
 	//	log.Println(jsonParams)
 }
