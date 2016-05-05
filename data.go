@@ -86,7 +86,8 @@ func nqmMarshalJSON(target model.NqmTarget, metric string, row []string) ParamTo
 	data.Timestamp = time.Now().Unix()
 	data.Endpoint = "nqm-endpoint"
 	data.Value = "0"
-	data.CounterType = "nqm"
+	data.CounterType = "GAUGE"
+	data.Step = int64(60)
 	return data
 }
 
