@@ -1,8 +1,9 @@
 package main
 
 import (
-	"log"
 	"strconv"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func convToFloat(samples []string) []float64 {
@@ -12,8 +13,10 @@ func convToFloat(samples []string) []float64 {
 		if sample != "-" {
 			rtt, err := strconv.ParseFloat(sample, 64)
 			if err != nil {
-				log.Println("error occured:", err)
-			} else {
+				log.Println("error occurred:", err)
+				continue
+			}
+			if rtt < float64(1000) {
 				floatData = append(floatData, rtt)
 			}
 		}

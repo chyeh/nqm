@@ -1,93 +1,82 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"math"
 	"net/rpc"
 	"time"
 
-	"github.com/Cepave/common/model"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/Cepave/open-falcon-backend/common/model"
 	"github.com/toolkits/net"
 )
 
-type SingleConnRpcClient struct {
-	rpcClient *rpc.Client
-	RpcServer string
-	Timeout   time.Duration
-}
+const ConnTimeout = 50 * time.Second
+
+var HbsRespTime time.Time
 
 var (
 	req       model.NqmTaskRequest
-	rpcClient SingleConnRpcClient
+	rpcServer string
 )
+var retryCnt = int(1)
 
-func (this *SingleConnRpcClient) close() {
-	if this.rpcClient != nil {
-		this.rpcClient.Close()
-		this.rpcClient = nil
+func closeConn(c *rpc.Client) {
+	if err := c.Close(); err != nil {
+		log.Errorln("[ hbs ] Error on closing RPC connection", err)
 	}
 }
 
-func (this *SingleConnRpcClient) insureConn() {
-	if this.rpcClient != nil {
-		return
+func wait4Retry() {
+	if retryCnt > 6 {
+		retryCnt = 1
 	}
+	time.Sleep(time.Duration(math.Pow(2.0, float64(retryCnt))) * time.Second)
+	retryCnt++
+}
 
-	var err error
-	var retry int = 1
-
+func initConn(server string) *rpc.Client {
 	for {
-		if this.rpcClient != nil {
-			return
-		}
-
-		this.rpcClient, err = net.JsonRpcClient("tcp", this.RpcServer, this.Timeout)
+		client, err := net.JsonRpcClient("tcp", server, ConnTimeout)
 		if err == nil {
-			return
+			return client
 		}
-
 		log.Println("[ hbs ] Error on query:", err)
 
-		if retry > 6 {
-			retry = 1
+		dur := int64(time.Since(HbsRespTime).Minutes())
+		var nilTime time.Time
+		if HbsRespTime.Add(6*time.Minute).Before(time.Now()) && HbsRespTime != nilTime {
+			log.Infof("[ hbs ] Last response: %dm ago\n", dur)
 		}
 
-		time.Sleep(time.Duration(math.Pow(2.0, float64(retry))) * time.Second)
-
-		retry++
+		wait4Retry()
 	}
 }
 
-func (this *SingleConnRpcClient) Call(method string, args interface{}, reply interface{}) error {
-	this.insureConn()
+func RPCCall(method string, args interface{}, reply interface{}) error {
+	currentRpcClient := initConn(rpcServer)
+	defer closeConn(currentRpcClient)
 
-	timeout := time.Duration(50 * time.Second)
-	done := make(chan error)
-
+	done := make(chan error, 1)
 	go func() {
-		err := this.rpcClient.Call(method, args, reply)
-		done <- err
+		done <- currentRpcClient.Call(method, args, reply)
 	}()
 
 	select {
-	case <-time.After(timeout):
-		log.Printf("[WARN] rpc call timeout %v => %v", this.rpcClient, this.RpcServer)
-		this.close()
+	case <-time.After(ConnTimeout):
+		return fmt.Errorf("Call to server <%s> timed out (%d seconds)", rpcServer, ConnTimeout)
 	case err := <-done:
-		if err != nil {
-			this.close()
-			return err
-		}
+		return err
 	}
-
-	return nil
 }
 
 func InitRPC() {
-	rpcClient.RpcServer = GetGeneralConfig().Hbs.RPCServer
+	rpcServer = Config().Hbs.RPCServer
 	req = model.NqmTaskRequest{
-		Hostname:     GetGeneralConfig().Hostname,
-		IpAddress:    GetGeneralConfig().IPAddress,
-		ConnectionId: GetGeneralConfig().ConnectionID,
+		Hostname:     Meta().Hostname,
+		IpAddress:    Meta().IPAddress,
+		ConnectionId: Meta().ConnectionID,
 	}
+	SetHBSResp(model.NqmTaskResponse{})
 }

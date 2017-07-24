@@ -1,11 +1,12 @@
 package main
 
 import (
-	"log"
 	"strconv"
 	"time"
 
-	"github.com/Cepave/common/model"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/Cepave/open-falcon-backend/common/model"
 	"github.com/montanaflynn/stats"
 )
 

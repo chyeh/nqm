@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Cepave/common/model"
+	"github.com/Cepave/open-falcon-backend/common/model"
 )
 
 func TestUpdatedMsg(t *testing.T) {
@@ -39,7 +39,7 @@ func TestUpdatedMsg(t *testing.T) {
 		"<fping Enabled> <tcpping Enabled> ",
 	}
 
-	for i, _ := range testsOld {
+	for i := range testsOld {
 		o := testsOld[i]
 		u := testsUpdated[i]
 		msg := updatedMsg(o, u)
